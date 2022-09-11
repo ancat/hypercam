@@ -30,8 +30,15 @@ nginx: worker process (/usr/sbin/nginx) 31689
 $ sudo hypercam pause 4106
 
 $ sudo hypercam splice 4106
+root@nginx:/# ps aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.2  10644  2808 ?        Ds   Mar16   0:00 nginx: master process nginx
+root       284  0.0  0.0   3868     0 pts/0    Ds+  Mar16   0:00 bash
+root      4214  0.0  0.0   3864    96 pts/1    Ds+  Sep05   0:00 bash
+nginx     4263  0.0  0.0  11100   604 ?        D    Sep05   0:00 nginx: worker process
+root      7226  0.0  0.2   7636  2708 ?        R+   16:36   0:00 ps aux
 root@nginx:/# etc...
-root@nginx:/#
+root@nginx:/# exit
 
 $ sudo hypercam unpause 4106
 
