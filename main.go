@@ -85,13 +85,19 @@ func main() {
 			{
 				Name:	 "splice",
 				Usage:	 "splice an interactive shell into the target",
+				Flags: []cli.Flag {
+					&cli.BoolFlag {
+						Name: "no-portal",
+						Usage: "don't create a portal into the container",
+					},
+				},
 				Action: func(cCtx *cli.Context) error {
 					pid, _ := requirePid(cCtx)
 					if pid == 0 {
 						return cli.Exit("pid missing", 1)
 					}
 
-					hypercam.SpawnShellInside(pid)
+					hypercam.SpawnShellInside(pid, !cCtx.Bool("no-portal"))
 					return nil
 				},
 			},

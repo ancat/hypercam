@@ -40,7 +40,7 @@ func Pr(pid int) error {
 	return nil
 }
 
-func SpawnShellInside(pid int) {
+func SpawnShellInside(pid int, portal bool) {
 	var handle *os.File
 	var err error
 
@@ -84,6 +84,19 @@ func SpawnShellInside(pid int) {
 
 	handle, _ = get_fd_for_pid_ns(4106, "user")
 	ns.SetNs(handle.Fd(), ns.CLONE_NEWUSER)*/
+
+	if portal {
+		fmt.Printf("one portal coming right up boss\n")
+		portal_path := fmt.Sprintf("/proc/%d/cwd/portal420", pid)
+		host_path, _ := os.MkdirTemp("", "portal")
+
+		os.Mkdir(portal_path, 0700)
+		os.RemoveAll(host_path)
+		os.Symlink(portal_path, host_path)
+		fmt.Printf("portal here: %s\n", host_path)
+	} else {
+		fmt.Printf("no portals tonight\n")
+	}
 
 	dir, _ := proc.GetPidRoot(4106)
 	syscall.Fchdir(int(dir.Fd()))
