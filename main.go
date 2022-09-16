@@ -90,6 +90,14 @@ func main() {
 						Name: "no-portal",
 						Usage: "don't create a portal into the container",
 					},
+					&cli.StringFlag {
+						Name: "exec",
+						Usage: "path to shell executable (default /bin/sh)",
+					},
+					&cli.StringFlag {
+						Name: "exec-from-host",
+						Usage: "path to shell executable, copied from the host; useful if the target doesn't contain a usable shell. may need to be statically compiled.",
+					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					pid, _ := requirePid(cCtx)
@@ -97,7 +105,20 @@ func main() {
 						return cli.Exit("pid missing", 1)
 					}
 
-					hypercam.SpawnShellInside(pid, !cCtx.Bool("no-portal"))
+					use_portals := !cCtx.Bool("no-portal")
+					host_executable := cCtx.String("exec-from-host")
+					guest_executable := cCtx.String("exec")
+					if host_executable != "" && guest_executable != "" {
+						return cli.Exit("--exec and --exec-from-host are mutually exclusive", 1)
+					} else if host_executable == "" && guest_executable != "" {
+						hypercam.SpawnShellInside(pid, use_portals, "", guest_executable)
+					} else if host_executable != "" && guest_executable == "" {
+						hypercam.SpawnShellInside(pid, use_portals, host_executable, "")
+					} else {
+						// neither is set
+						hypercam.SpawnShellInside(pid, use_portals, "", "/bin/sh")
+					}
+
 					return nil
 				},
 			},

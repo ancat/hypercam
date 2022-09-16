@@ -3,6 +3,7 @@ package proc
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"encoding/hex"
 	"io/fs"
@@ -10,7 +11,47 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
+	"unsafe"
 )
+
+var SYS_EXECVEAT, EXECVEAT_ERR = execveat_syscall_number()
+func SneakyExec(handle *os.File, argv []string) {
+	if EXECVEAT_ERR != nil {
+		panic(EXECVEAT_ERR)
+	}
+
+	empty_path, _ := syscall.BytePtrFromString("")
+	p_empty_path := unsafe.Pointer(empty_path)
+	p_argv, _ := syscall.SlicePtrFromStrings(argv)
+	syscall.Syscall6(
+		uintptr(SYS_EXECVEAT),
+		uintptr(handle.Fd()),
+		uintptr(p_empty_path), // if empty, we execute the fd instead
+		uintptr(unsafe.Pointer(&p_argv[0])),
+		uintptr(0),
+		uintptr(0x1000), // AT_EMPTY_PATH
+		uintptr(0),
+	)
+}
+
+func execveat_syscall_number() (int, error) {
+	handle, err := os.Open("/usr/include/asm/unistd_64.h")
+	if err != nil {
+		return -1, err
+	}
+
+	scanner := bufio.NewScanner(handle)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) == 3 && fields[1] == "__NR_execveat" {
+			return strconv.Atoi(fields[2])
+		}
+	}
+
+	return -1, errors.New("couldn't find it I guess")
+}
 
 func GetExe(pid int) string {
 	fd_name := fmt.Sprintf("/proc/%d/exe", pid)
