@@ -40,7 +40,7 @@ func Pr(pid int) error {
 	return nil
 }
 
-func SpawnShellInside(pid int) {
+func SpawnShellInside(pid int, portal bool, host_executable string, guest_executable string) {
 	var handle *os.File
 	var err error
 
@@ -85,9 +85,37 @@ func SpawnShellInside(pid int) {
 	handle, _ = get_fd_for_pid_ns(4106, "user")
 	ns.SetNs(handle.Fd(), ns.CLONE_NEWUSER)*/
 
+	if portal {
+		portal_path := fmt.Sprintf("/proc/%d/cwd/portal420", pid)
+		host_path, _ := os.MkdirTemp("", "portal")
+
+		os.Mkdir(portal_path, 0700)
+		os.RemoveAll(host_path)
+		os.Symlink(portal_path, host_path)
+		fmt.Printf("Host Endpoint: %s\nGuest Endpoint: %s\n", host_path, "/portal420")
+	}
+
+	var sneaky_handle *os.File
+	if host_executable != "" {
+		sneaky_handle, err = os.Open(host_executable)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	dir, _ := proc.GetPidRoot(4106)
 	syscall.Fchdir(int(dir.Fd()))
 	syscall.Chroot(".")
-	syscall.Exec("/bin/bash", nil, nil)
 
+	if host_executable != "" {
+		proc.SneakyExec(sneaky_handle, []string{"hypercam shell"})
+		panic("FAIL")
+	}
+
+	if guest_executable == "" {
+		guest_executable = "/bin/sh"
+	}
+
+	syscall.Exec(guest_executable, nil, nil)
+	panic("FAIL")
 }
