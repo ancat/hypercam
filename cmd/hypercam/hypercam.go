@@ -149,6 +149,7 @@ func DumpMaps(pid int, hex_dump bool) {
 
 		if err != nil {
 			fmt.Printf("Failed to read page: %s\n", err)
+			continue
 		}
 
 		if hex_dump {
