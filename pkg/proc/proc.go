@@ -13,9 +13,84 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 var SYS_EXECVEAT, EXECVEAT_ERR = execveat_syscall_number()
+func ReadProcessMemory(pid int, address uintptr, length uint64) ([]byte, error) {
+	destination := make([]byte, length)
+	// _ = new(unix.Iovec)
+	local_iovec := make([]unix.Iovec, 1)
+	local_iovec[0].Base = (*byte) (unsafe.Pointer(&destination[0]))
+	local_iovec[0].Len = length
+
+	remote_iovec := make([]unix.RemoteIovec, 1)
+	remote_iovec[0].Base = address
+	remote_iovec[0].Len = int(length) // why is local a uint64 and remote int¿
+
+	_, err := unix.ProcessVMReadv(pid, local_iovec, remote_iovec, 0)
+	return destination, err
+}
+
+func GetMaps(pid int) []*MemoryMap {
+	handle, err := os.Open(fmt.Sprintf("/proc/%d/maps", pid))
+	if err != nil {
+		panic(err)
+	}
+
+	defer handle.Close()
+	scanner := bufio.NewScanner(handle)
+	maps := make([]*MemoryMap, 0)
+	for scanner.Scan() {
+		line := scanner.Text()
+		cur_map := new(MemoryMap)
+
+		var t_map_start uint64
+		var t_map_end uint64
+		var t_perms string
+		var t_len uint64
+		var t_dev string
+		var t_inode int
+		var t_name string
+
+		// 7ffd4d9f1000-7ffd4d9f3000 r-xp 00000000 00:00 0				[vdso]
+		scanned, _ := fmt.Sscanf(line, "%x-%x %s %x %s %d %s",
+			&t_map_start,
+			&t_map_end,
+			&t_perms,
+			&t_len,
+			&t_dev,
+			&t_inode,
+			&t_name)
+
+		if scanned != 7 {
+			continue
+		}
+
+		// address_space := fields[0]
+		perms := 0
+		for i := 0; i < 3; i++ {
+			switch t_perms[i] {
+			case 'r':
+				perms |= 0x1
+			case 'w':
+				perms |= 0x2
+			case 'x':
+				perms |= 0x4
+			}
+		}
+
+		cur_map.Name = t_name
+		cur_map.Base = uintptr(t_map_start)
+		cur_map.Length = t_map_end - t_map_start
+		cur_map.Perms = perms
+		maps = append(maps, cur_map)
+	}
+
+	return maps
+}
+
 func SneakyExec(handle *os.File, argv []string) {
 	if EXECVEAT_ERR != nil {
 		panic(EXECVEAT_ERR)

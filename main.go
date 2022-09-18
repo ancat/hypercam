@@ -122,6 +122,26 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:	"scan",
+				Usage:	"scan a process' stack and heap",
+				Flags:	[]cli.Flag {
+					&cli.BoolFlag {
+						Name: "hex",
+						Usage: "print a hex dump instead",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					pid, _ := requirePid(cCtx)
+					if pid == 0 {
+						return cli.Exit("pid missing", 1)
+					}
+
+					hex_dump := cCtx.Bool("hex")
+					hypercam.DumpMaps(pid, hex_dump)
+					return nil
+				},
+			},
 		},
 	}
 
