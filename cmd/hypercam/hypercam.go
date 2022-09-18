@@ -1,10 +1,13 @@
 package hypercam
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
+	"unicode"
 
 	"github.com/ancat/hypercam/pkg/freezer"
 	"github.com/ancat/hypercam/pkg/proc"
@@ -118,4 +121,57 @@ func SpawnShellInside(pid int, portal bool, host_executable string, guest_execut
 
 	syscall.Exec(guest_executable, nil, nil)
 	panic("FAIL")
+}
+
+func DumpMaps(pid int, hex_dump bool) {
+	maps := proc.GetMaps(pid)
+	for _, memory_map := range maps {
+		var page *proc.MemoryMap
+		if memory_map.Name == "[stack]" {
+			page = memory_map
+			fmt.Printf("Stack Located\n")
+		}
+
+		if memory_map.Name == "[heap]" {
+			page = memory_map
+			fmt.Printf("Heap Located\n")
+		}
+
+		if page == nil {
+			continue
+		}
+
+		page_contents, err := proc.ReadProcessMemory(
+			pid,
+			memory_map.Base,
+			memory_map.Length,
+		)
+
+		if err != nil {
+			fmt.Printf("Failed to read page: %s\n", err)
+		}
+
+		if hex_dump {
+			fmt.Printf("%s", hex.Dump(page_contents))
+		} else {
+			print_strings(page_contents, 10)
+		}
+	}
+}
+
+func print_strings(buffer []byte, min_len int) {
+	start := 0
+	for i, c := range(buffer) {
+		if !unicode.IsPrint(rune(c)) {
+			strlen := i - start
+			if strlen >= min_len {
+				trimmed := strings.TrimSpace(string(buffer[start:i]))
+				if len(trimmed) >= min_len {
+					fmt.Printf("%s\n", trimmed)
+				}
+			}
+
+			start = i
+		}
+	}
 }
