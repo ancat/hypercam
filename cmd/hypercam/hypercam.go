@@ -82,12 +82,6 @@ func SpawnShellInside(pid int, portal bool, host_executable string, guest_execut
 	}
 	defer handle.Close()
 
-	/*handle, _ = get_fd_for_pid_ns(4106, "mnt")
-	ns.SetNs(handle.Fd(), ns.CLONE_NEWNS)
-
-	handle, _ = get_fd_for_pid_ns(4106, "user")
-	ns.SetNs(handle.Fd(), ns.CLONE_NEWUSER)*/
-
 	if portal {
 		portal_path := fmt.Sprintf("/proc/%d/cwd/portal420", pid)
 		host_path, _ := os.MkdirTemp("", "portal")
@@ -106,7 +100,7 @@ func SpawnShellInside(pid int, portal bool, host_executable string, guest_execut
 		}
 	}
 
-	dir, _ := proc.GetPidRoot(4106)
+	dir, _ := proc.GetPidRoot(pid)
 	syscall.Fchdir(int(dir.Fd()))
 	syscall.Chroot(".")
 
