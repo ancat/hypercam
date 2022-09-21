@@ -1,5 +1,15 @@
 # hypercam
 
+hypercam is a tool that lets you interact with processes and containers at a lower level than most other interfaces, letting you do some neat things that would otherwise not be possible.
+
+## Features
+
+* Pause and unpause containers/processes
+* Open a live shell into paused containers, allowing you to inspect container state as is
+* Open shells (or any arbitrary program!) inside containers whose images don't come with them
+* Mount a directory into running containers to make moving files in and out easier
+* Dump strings/a hexdump of the heap and stack of any process
+
 ```
 $ sudo hypercam -h
 NAME:
